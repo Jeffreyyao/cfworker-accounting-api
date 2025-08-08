@@ -113,23 +113,23 @@ router.get('/spendings/by-date', async (request) => {
 });
 
 router.post('/spendings/add', async (request) => {
-    type SpendingsAddRequestBody = { db: string, spending: Spending };
     const db = request.query.db as string;
     if (!db) {
         return new Response('Missing db_name parameter', { status: 400 });
     }
     try {
-        const body = await request.json() as SpendingsAddRequestBody;
-        const db = body.db;
-        if (!db) {
-            return new Response('Missing db parameter', { status: 400 });
-        }
-        const spending = body.spending;
+        const spending = await request.json() as Spending;
         if (!spending) {
             return new Response('Missing spending parameter', { status: 400 });
         }
         const accounting_db = client.db(db);
-        const result = await accounting_db.collection('spendings').insertOne(body);
+
+        const lastSpending = await accounting_db.collection('spendings')
+            .findOne({}, { sort: { spendingId: -1 } });
+        const nextSpendingId = lastSpending ? (lastSpending.spendingId + 1) : 1;
+        spending.spendingId = nextSpendingId;
+        
+        const result = await accounting_db.collection('spendings').insertOne(spending);
         return new Response(JSON.stringify(result), { status: 200 });
     } catch (err: any) {
         return new Response('Internal Server Error:' + err.message, { status: 500 });
