@@ -136,4 +136,41 @@ router.post('/spendings/add', async (request) => {
     }
 });
 
+router.get('/categories', async (request) => {
+    const db = request.query.db as string;
+    if (!db) {
+        return new Response('Missing db_name parameter', { status: 400 });
+    }
+    try {
+        const accounting_db = client.db(db);
+        const categories = await accounting_db.collection('categories').find({}).toArray();
+        return new Response(JSON.stringify(categories), { status: 200 });
+    } catch (err: any) {
+        return new Response('Internal Server Error:' + err.message, { status: 500 });
+    }
+});
+
+type Category = {
+    categoryId: number;
+    name: string;
+}
+
+router.post('/categories/add', async (request) => {
+    const db = request.query.db as string;
+    if (!db) {
+        return new Response('Missing db_name parameter', { status: 400 });
+    }
+    try {
+        const category = await request.json() as Category;
+        if (!category) {
+            return new Response('Missing category parameter', { status: 400 });
+        }
+        const accounting_db = client.db(db);
+        const result = await accounting_db.collection('categories').insertOne(category);
+        return new Response(JSON.stringify(result), { status: 200 });
+    } catch (err: any) {
+        return new Response('Internal Server Error:' + err.message, { status: 500 });
+    }
+});
+
 export default router;
