@@ -24,11 +24,11 @@ async function addSpending() {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            amount: -100,
-            description: 'Test spending',
+            amount: Math.floor(Math.random() * 2001) - 1000,
+            description: `Test spending ${new Date().toISOString()}`,
             categoryId: 0,
-            dateOfSpending: '2025-08-08',
-            currency: 'USD'
+            dateOfSpending: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+            currency: ['HKD', 'USD', 'CNY', 'JPY'][Math.floor(Math.random() * 4)]
         })
     });
     if (response.ok) {
@@ -40,7 +40,21 @@ async function addSpending() {
 }
 
 async function main() {
-    await fetchAllSpendings();
-    // await addSpending();
+    const args = process.argv.slice(2);
+    const functionNumber = parseInt(args[0]);
+    
+    switch (functionNumber) {
+        case 0:
+            await fetchAllSpendings();
+            break;
+        case 1:
+            await addSpending();
+            break;
+        default:
+            console.log('Available functions:');
+            console.log('0: fetchAllSpendings');
+            console.log('1: addSpending');
+            break;
+    }
 }
 main().catch(console.error);
