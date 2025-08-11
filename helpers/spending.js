@@ -1,5 +1,5 @@
-// const API_URL = 'https://accounting-api.zyaoaq.workers.dev';
-const API_URL = 'http://127.0.0.1:8787';
+const API_URL = 'https://accounting-api.zyaoaq.workers.dev';
+//const API_URL = 'http://127.0.0.1:8787';
 const DB = 'accounting-0'
 
 async function fetchAllSpendings() {

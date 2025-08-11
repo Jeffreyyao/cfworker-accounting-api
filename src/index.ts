@@ -13,12 +13,35 @@
 
 import router from './router';
 
+// Helper function to add CORS headers
+function addCorsHeaders(response: Response): Response {
+	const newResponse = new Response(response.body, response);
+	newResponse.headers.set('Access-Control-Allow-Origin', '*');
+	newResponse.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+	newResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+	return newResponse;
+}
+
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
+		// Handle preflight OPTIONS requests
+		if (request.method === 'OPTIONS') {
+			return new Response(null, {
+				status: 200,
+				headers: {
+					'Access-Control-Allow-Origin': '*',
+					'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+					'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+				},
+			});
+		}
+
 		try {
-			return await router.fetch(request, env, null)
+			const response = await router.fetch(request, env, null);
+			return addCorsHeaders(response);
 		} catch (err: any) {
-			return new Response('Internal Server Error:' + err.message, { status: 500 });
+			const errorResponse = new Response('Internal Server Error:' + err.message, { status: 500 });
+			return addCorsHeaders(errorResponse);
 		}
 	},
 } satisfies ExportedHandler<Env>;

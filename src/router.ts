@@ -13,9 +13,12 @@ router.get('/', () => {
 
 router.get('/dbs', async () => {
     try {
+        await client.connect();
         const dbs = await client.db().admin().listDatabases();
+        await client.close();
         return new Response(JSON.stringify(dbs), { status: 200 });
     } catch (err: any) {
+        console.error(err);
         return new Response('Internal Server Error:' + err.message, { status: 500 });
     }
 });
@@ -26,14 +29,17 @@ router.get('/name', async (request) => {
         return new Response('Missing db_name parameter', { status: 400 });
     }
     try {
+        await client.connect();
         const accounting_db = client.db(db);
         const property = await accounting_db.collection('properties').findOne({});
+        await client.close();
         const db_name = property?.name;
         if (!db_name) {
             return new Response('Property not found', { status: 404 });
         }
         return new Response(JSON.stringify(db_name), { status: 200 });
     } catch (err: any) {
+        console.error(err);
         return new Response('Internal Server Error:' + err.message, { status: 500 });
     }
 });
@@ -50,12 +56,14 @@ router.post('/name/modify', async (request) => {
         return new Response('Missing name parameter', { status: 400 });
     }
     try {
+        await client.connect();
         const accounting_db = client.db(db);
         const property = await accounting_db.collection('properties').findOne({});
         if (!property) {
             return new Response('Property not found', { status: 404 });
         }
         const result = await accounting_db.collection('properties').updateOne({ _id: property._id }, { $set: { name: name } });
+        await client.close();
         return new Response(JSON.stringify(result), { status: 200 });
     } catch (err: any) {
         return new Response('Internal Server Error:' + err.message, { status: 500 });
@@ -77,10 +85,13 @@ router.get('/spendings', async (request) => {
         return new Response('Missing db_name parameter', { status: 400 });
     }
     try {
+        await client.connect();
         const accounting_db = client.db(db);
         const spendings = (await accounting_db.collection('spendings').find({}).toArray()) as unknown as Spending[];
+        await client.close();
         return new Response(JSON.stringify(spendings), { status: 200 });
     } catch (err: any) {
+        console.error(err);
         return new Response('Internal Server Error:' + err.message, { status: 500 });
     }
 });
@@ -99,6 +110,7 @@ router.get('/spendings/by-date', async (request) => {
         return new Response('Missing endDate parameter', { status: 400 });
     }
     try {
+        await client.connect();
         const accounting_db = client.db(db);
         const spendings = (await accounting_db.collection('spendings').find({
             dateOfSpending: {
@@ -106,8 +118,10 @@ router.get('/spendings/by-date', async (request) => {
                 $lte: new Date(endDate)
             }
         }).toArray()) as unknown as Spending[];
+        await client.close();
         return new Response(JSON.stringify(spendings), { status: 200 });
     } catch (err: any) {
+        console.error(err);
         return new Response('Internal Server Error:' + err.message, { status: 500 });
     }
 });
@@ -122,6 +136,7 @@ router.post('/spendings/add', async (request) => {
         if (!spending) {
             return new Response('Missing spending parameter', { status: 400 });
         }
+        await client.connect();
         const accounting_db = client.db(db);
 
         const lastSpending = await accounting_db.collection('spendings')
@@ -130,22 +145,10 @@ router.post('/spendings/add', async (request) => {
         spending.spendingId = nextSpendingId;
         
         const result = await accounting_db.collection('spendings').insertOne(spending);
+        await client.close();
         return new Response(JSON.stringify(result), { status: 200 });
     } catch (err: any) {
-        return new Response('Internal Server Error:' + err.message, { status: 500 });
-    }
-});
-
-router.get('/categories', async (request) => {
-    const db = request.query.db as string;
-    if (!db) {
-        return new Response('Missing db_name parameter', { status: 400 });
-    }
-    try {
-        const accounting_db = client.db(db);
-        const categories = await accounting_db.collection('categories').find({}).toArray();
-        return new Response(JSON.stringify(categories), { status: 200 });
-    } catch (err: any) {
+        console.error(err);
         return new Response('Internal Server Error:' + err.message, { status: 500 });
     }
 });
@@ -154,6 +157,23 @@ type Category = {
     categoryId: number;
     name: string;
 }
+
+router.get('/categories', async (request) => {
+    const db = request.query.db as string;
+    if (!db) {
+        return new Response('Missing db_name parameter', { status: 400 });
+    }
+    try {
+        await client.connect();
+        const accounting_db = client.db(db);
+        const categories = await accounting_db.collection('categories').find({}).toArray();
+        await client.close();
+        return new Response(JSON.stringify(categories), { status: 200 });
+    } catch (err: any) {
+        console.error('error', err);
+        return new Response('Internal Server Error:' + err.message, { status: 500 });
+    }
+});
 
 router.post('/categories/add', async (request) => {
     const db = request.query.db as string;
@@ -165,10 +185,13 @@ router.post('/categories/add', async (request) => {
         if (!category) {
             return new Response('Missing category parameter', { status: 400 });
         }
+        await client.connect();
         const accounting_db = client.db(db);
         const result = await accounting_db.collection('categories').insertOne(category);
+        await client.close();
         return new Response(JSON.stringify(result), { status: 200 });
     } catch (err: any) {
+        console.error(err);
         return new Response('Internal Server Error:' + err.message, { status: 500 });
     }
 });
