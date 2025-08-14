@@ -50,13 +50,29 @@ router.post('/', async (request) => {
         return new Response('Missing db_name parameter', { status: 400 });
     }
     try {
-        const category = await request.json() as Category;
-        if (!category) {
-            return new Response('Missing category parameter', { status: 400 });
+        const categoryData = await request.json() as Omit<Category, 'categoryId'>;
+        if (!categoryData || !categoryData.name) {
+            return new Response('Missing category name', { status: 400 });
         }
-        
+
         const result = await withDatabase(db, async (accounting_db) => {
             await ensureCategoriesCollection(accounting_db);
+            
+            // Find the highest existing categoryId
+            const highestCategory = await accounting_db.collection('categories')
+                .find()
+                .sort({ categoryId: -1 })
+                .limit(1)
+                .toArray();
+            
+            // Generate next available categoryId
+            const nextCategoryId = highestCategory.length > 0 ? highestCategory[0].categoryId + 1 : 1;
+            
+            const category: Category = {
+                categoryId: nextCategoryId,
+                name: categoryData.name
+            };
+            
             return await accounting_db.collection('categories').insertOne(category);
         });
         
