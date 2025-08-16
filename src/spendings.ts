@@ -105,6 +105,62 @@ router.delete('/', async (request) => {
     }
 });
 
+// PUT / - Update spending by ID (mounted at /spendings)
+router.put('/', async (request) => {
+    const db = request.query.db as string;
+    if (!db) {
+        return new Response('Missing db_name parameter', { status: 400 });
+    }
+    try {
+        const { spendingId, amount, currency, dateOfSpending, description, categoryId } = await request.json() as {
+            spendingId: number;
+            amount?: number;
+            currency?: string;
+            dateOfSpending?: Date;
+            description?: string;
+            categoryId?: string;
+        };
+        
+        if (spendingId === undefined) {
+            return new Response('Missing spendingId parameter', { status: 400 });
+        }
+        
+        // Build update object with only provided fields
+        const updateFields: Partial<Spending> = {};
+        if (amount !== undefined) updateFields.amount = amount;
+        if (currency !== undefined) updateFields.currency = currency;
+        if (dateOfSpending !== undefined) updateFields.dateOfSpending = dateOfSpending;
+        if (description !== undefined) updateFields.description = description;
+        if (categoryId !== undefined) updateFields.categoryId = categoryId;
+        
+        // Check if at least one field is provided for update
+        if (Object.keys(updateFields).length === 0) {
+            return new Response('No fields provided for update', { status: 400 });
+        }
+        
+        const result = await withDatabase(db, async (accounting_db) => {
+            await ensureSpendingsCollection(accounting_db);
+            return await accounting_db.collection('spendings').updateOne(
+                { spendingId: spendingId },
+                { $set: updateFields }
+            );
+        });
+        
+        if (result.matchedCount === 0) {
+            return new Response('Spending not found', { status: 404 });
+        }
+        
+        if (result.modifiedCount === 0) {
+            return new Response('No changes made to spending', { status: 200 });
+        }
+        
+        return new Response(JSON.stringify(result), { status: 200 });
+    } catch (err: any) {
+        console.error(err);
+        return new Response('Internal Server Error:' + err.message, { status: 500 });
+    }
+});
+
 // GET /by-date - Get spendings by date range (mounted at /spendings/by-date)
 router.get('/by-date', async (request) => {
     const db = request.query.db as string;
